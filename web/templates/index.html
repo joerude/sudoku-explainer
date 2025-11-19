@@ -35,16 +35,34 @@
 
             <div class="custom-puzzle-section">
                 <h3>Custom</h3>
-                <form hx-post="/new" hx-target="#interaction-area" class="input-form" id="puzzleForm">
-                    <input type="text" name="puzzle_input" id="puzzleInput" placeholder="Paste 81 chars..."
-                        pattern="[0-9]{81}" title="81 digits">
-                    <button type="submit" class="btn-icon" title="Load">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                    </button>
-                </form>
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('text')">Text</button>
+                    <button class="tab-btn" onclick="switchTab('image')">Image</button>
+                </div>
+
+                <div id="text-tab" class="tab-content active">
+                    <form hx-post="/new" hx-target="#board-container-wrapper" class="input-form" id="puzzleForm">
+                        <input type="text" name="puzzle_input" id="puzzleInput" placeholder="Paste 81 chars..."
+                            pattern="[0-9]{81}" title="81 digits">
+                        <button type="submit" class="btn-icon" title="Load">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <polyline points="9 18 15 12 9 6"></polyline>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+
+                <div id="image-tab" class="tab-content">
+                    <form hx-post="/import" hx-encoding="multipart/form-data" hx-target="#board-container-wrapper"
+                        class="upload-form">
+                        <div class="drop-zone" id="dropZone">
+                            <p>Drag & Drop or Paste Image</p>
+                            <input type="file" name="file" accept="image/*" id="fileInput">
+                        </div>
+                    </form>
+                </div>
             </div>
         </aside>
 
@@ -55,8 +73,49 @@
                 <p>AI-powered step-by-step logical solver</p>
             </header>
 
-            <div id="interaction-area">
-                {% include "partials/interaction_area.html" %}
+            <div class="game-layout">
+                <div id="board-container-wrapper" class="board-container">
+                    {% include "partials/board.html" %}
+                </div>
+
+                <div class="sidebar">
+                    <div class="controls-header">
+                        <div class="toggles-container">
+                            <label class="toggle-switch" title="Hide candidates">
+                                <input type="checkbox" id="notesToggle" onclick="toggleNotes()" checked>
+                                <span class="slider round"></span>
+                                <span class="label-text">Easy Mode</span>
+                            </label>
+                            <label class="toggle-switch" title="Show incorrect values in red">
+                                <input type="checkbox" id="mistakesToggle" onclick="toggleMistakes()">
+                                <span class="slider round"></span>
+                                <span class="label-text">Mistakes</span>
+                            </label>
+                            <label class="toggle-switch" title="Highlight all cells with same number">
+                                <input type="checkbox" id="highlightSameToggle" onclick="toggleHighlightSame()">
+                                <span class="slider round"></span>
+                                <span class="label-text">Highlight #</span>
+                            </label>
+                            <label class="toggle-switch" title="Highlight row and column">
+                                <input type="checkbox" id="crosshairToggle" onclick="toggleCrosshair()">
+                                <span class="slider round"></span>
+                                <span class="label-text">Crosshair</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Number Pad -->
+                    <div class="numpad">
+                        {% for i in range(1, 10) %}
+                        <button class="numpad-btn" onclick="handleNumpad({{ i }})">{{ i }}</button>
+                        {% endfor %}
+                        <button class="numpad-btn erase-btn" onclick="handleNumpad(0)">⌫</button>
+                    </div>
+
+                    <div id="dynamic-controls-wrapper">
+                        {% include "partials/controls.html" %}
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -66,6 +125,235 @@
             document.getElementById('puzzleInput').value = puzzleStr;
             htmx.trigger('#puzzleForm', 'submit');
         }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            if (tab === 'text') {
+                document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+                document.getElementById('text-tab').classList.add('active');
+            } else {
+                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+                document.getElementById('image-tab').classList.add('active');
+            }
+        }
+
+        // Paste support
+        document.addEventListener('paste', function (e) {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    const fileInput = document.getElementById('fileInput');
+
+                    // Create a DataTransfer to set files property
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(blob);
+                    fileInput.files = dataTransfer.files;
+
+                    // Trigger upload
+                    htmx.trigger('.upload-form', 'submit');
+                    switchTab('image');
+                }
+            }
+        });
+
+        // Drag & Drop
+        const dropZone = document.getElementById('dropZone');
+        if (dropZone) {
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+
+                if (e.dataTransfer.files.length) {
+                    document.getElementById('fileInput').files = e.dataTransfer.files;
+                    htmx.trigger('.upload-form', 'submit');
+                }
+            });
+
+            dropZone.addEventListener('click', () => {
+                document.getElementById('fileInput').click();
+            });
+
+            document.getElementById('fileInput').addEventListener('change', () => {
+                if (document.getElementById('fileInput').files.length) {
+                    htmx.trigger('.upload-form', 'submit');
+                }
+            });
+        }
+
+        // --- Global State & Logic ---
+        var state = {
+            selectedRow: -1,
+            selectedCol: -1,
+            hideNotes: true,
+            showMistakes: false,
+            highlightSame: false,
+            crosshair: false
+        };
+
+        // Initialize visuals on load
+        document.addEventListener('DOMContentLoaded', () => {
+            if (document.getElementById('notesToggle')) state.hideNotes = document.getElementById('notesToggle').checked;
+            if (state.hideNotes) document.body.classList.add('hide-notes');
+            applyVisuals();
+        });
+
+        function toggleNotes() {
+            state.hideNotes = !state.hideNotes;
+            document.body.classList.toggle('hide-notes', state.hideNotes);
+        }
+
+        function toggleMistakes() {
+            state.showMistakes = !state.showMistakes;
+            applyVisuals();
+        }
+
+        function toggleHighlightSame() {
+            state.highlightSame = !state.highlightSame;
+            applyVisuals();
+        }
+
+        function toggleCrosshair() {
+            state.crosshair = !state.crosshair;
+        }
+
+        function selectCell(element, r, c) {
+            // Deselect previous
+            document.querySelectorAll('.cell.selected').forEach(el => el.classList.remove('selected'));
+
+            // Select new
+            element.classList.add('selected');
+            state.selectedRow = r;
+            state.selectedCol = c;
+
+            applyVisuals();
+        }
+
+        function handleMouseEnter(r, c) {
+            if (!state.crosshair) return;
+
+            document.querySelectorAll('.cell').forEach(el => {
+                el.classList.remove('crosshair-highlight');
+                if (el.dataset.row == r || el.dataset.col == c) {
+                    el.classList.add('crosshair-highlight');
+                }
+            });
+        }
+
+        function handleMouseLeave() {
+            document.querySelectorAll('.cell.crosshair-highlight').forEach(el => el.classList.remove('crosshair-highlight'));
+        }
+
+        function applyVisuals() {
+            const solutionEl = document.getElementById('solutionData');
+            if (!solutionEl) return;
+
+            const solution = solutionEl.dataset.solution;
+            const cells = document.querySelectorAll('.cell');
+
+            // Get selected value for highlighting
+            let selectedValue = 0;
+            if (state.selectedRow !== -1 && state.selectedCol !== -1) {
+                const selectedCell = document.getElementById(`cell-${state.selectedRow}-${state.selectedCol}`);
+                if (selectedCell) {
+                    selectedValue = selectedCell.dataset.value;
+                }
+            }
+
+            cells.forEach(cell => {
+                const r = parseInt(cell.dataset.row);
+                const c = parseInt(cell.dataset.col);
+                const val = parseInt(cell.dataset.value);
+                const idx = r * 9 + c;
+                const correctVal = parseInt(solution[idx]);
+
+                // Mistakes
+                cell.classList.remove('error');
+                if (state.showMistakes && val !== 0 && val !== correctVal) {
+                    cell.classList.add('error');
+                }
+
+                // Highlight Same
+                cell.classList.remove('highlight-same');
+                if (state.highlightSame && selectedValue != 0 && val == selectedValue) {
+                    cell.classList.add('highlight-same');
+                }
+            });
+        }
+
+        function handleNumpad(num) {
+            if (state.selectedRow === -1 || state.selectedCol === -1) return;
+            submitUpdate(num, 'value');
+        }
+
+        function submitUpdate(value, mode) {
+            const form = document.getElementById('updateForm');
+            if (!form) return;
+
+            document.getElementById('updateRow').value = state.selectedRow;
+            document.getElementById('updateCol').value = state.selectedCol;
+            document.getElementById('updateValue').value = value;
+            document.getElementById('updateMode').value = mode;
+
+            htmx.trigger('#updateForm', 'submit');
+        }
+
+        // Keyboard listener
+        document.addEventListener('keydown', function (e) {
+            if (e.target.tagName === 'INPUT') return;
+
+            // Arrow Key Navigation
+            if (e.key.startsWith('Arrow')) {
+                e.preventDefault();
+                let r = state.selectedRow;
+                let c = state.selectedCol;
+
+                if (r === -1 || c === -1) {
+                    r = 0; c = 0;
+                } else {
+                    if (e.key === 'ArrowUp') r = Math.max(0, r - 1);
+                    if (e.key === 'ArrowDown') r = Math.min(8, r + 1);
+                    if (e.key === 'ArrowLeft') c = Math.max(0, c - 1);
+                    if (e.key === 'ArrowRight') c = Math.min(8, c + 1);
+                }
+
+                const cell = document.getElementById(`cell-${r}-${c}`);
+                if (cell) selectCell(cell, r, c);
+                return;
+            }
+
+            if (state.selectedRow === -1 || state.selectedCol === -1) return;
+
+            let value = -1;
+            let mode = 'value';
+
+            if (e.key >= '1' && e.key <= '9') {
+                value = parseInt(e.key);
+                if (e.shiftKey) {
+                    mode = 'note';
+                } else {
+                    mode = 'value';
+                }
+            } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
+                value = 0;
+                mode = 'value';
+            }
+
+            if (value !== -1) {
+                submitUpdate(value, mode);
+            }
+        });
     </script>
 </body>
 

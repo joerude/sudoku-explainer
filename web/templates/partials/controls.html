@@ -1,0 +1,45 @@
+<div class="explanation-card">
+    <h3>Analysis</h3>
+    <div class="explanation-text">
+        {{ explanation | safe }}
+    </div>
+</div>
+
+<div class="actions">
+    <div class="button-group">
+        <form hx-post="/undo" hx-target="#board-container-wrapper">
+            <input type="hidden" name="history" value='{{ history }}'>
+            <button type="submit" class="btn-secondary" {% if history=="[]" %}disabled{% endif %}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 14 4 9l5-5" />
+                    <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11" />
+                </svg>
+                Undo
+            </button>
+        </form>
+
+        <form hx-post="/step" hx-target="#board-container-wrapper" class="step-form">
+            <input type="hidden" name="puzzle_str" value="{{ puzzle_str }}">
+            <input type="hidden" name="history" value='{{ history }}'>
+            <button type="submit" class="btn-primary big-btn">
+                Next Step
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Hidden form for manual updates -->
+<form id="updateForm" hx-post="/update" hx-target="#board-container-wrapper" style="display:none;">
+    <input type="hidden" name="puzzle_str" value="{{ puzzle_str }}">
+    <input type="hidden" name="history" value='{{ history }}'>
+    <input type="hidden" name="row" id="updateRow">
+    <input type="hidden" name="col" id="updateCol">
+    <input type="hidden" name="value" id="updateValue">
+    <input type="hidden" name="mode" id="updateMode">
+</form>

@@ -219,7 +219,7 @@ header p {
 }
 
 .board-row.border-bottom {
-    border-bottom: 2px solid var(--board-border);
+    border-bottom: 4px solid var(--text-primary);
 }
 
 .cell {
@@ -232,15 +232,39 @@ header p {
     position: relative;
     font-size: 1.5rem;
     font-weight: 600;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+
+.cell:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.cell.selected {
+    background-color: rgba(59, 130, 246, 0.2);
+    border: 2px solid var(--accent);
 }
 
 .cell.border-right {
-    border-right: 2px solid var(--board-border);
+    border-right: 4px solid var(--text-primary);
 }
 
 .cell.filled {
     background-color: rgba(59, 130, 246, 0.1);
     color: var(--text-primary);
+}
+
+.cell.error {
+    color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.cell.highlight-same {
+    background-color: rgba(59, 130, 246, 0.4);
+}
+
+.cell.crosshair-highlight {
+    background-color: rgba(255, 255, 255, 0.03);
 }
 
 .candidates-grid {
@@ -300,8 +324,13 @@ body.hide-notes .candidates-grid {
 
 /* Controls */
 .controls-header {
+    margin-bottom: 1rem;
+}
+
+.toggles-container {
     display: flex;
-    justify-content: flex-end;
+    flex-direction: column;
+    gap: 0.8rem;
 }
 
 .toggle-switch {
@@ -319,18 +348,18 @@ body.hide-notes .candidates-grid {
 
 .slider {
     position: relative;
-    width: 40px;
-    height: 20px;
+    width: 36px;
+    height: 18px;
     background-color: var(--cell-border);
-    border-radius: 20px;
+    border-radius: 18px;
     transition: .4s;
 }
 
 .slider:before {
     position: absolute;
     content: "";
-    height: 16px;
-    width: 16px;
+    height: 14px;
+    width: 14px;
     left: 2px;
     bottom: 2px;
     background-color: white;
@@ -343,10 +372,37 @@ input:checked+.slider {
 }
 
 input:checked+.slider:before {
-    transform: translateX(20px);
+    transform: translateX(18px);
 }
 
-/* Buttons */
+/* Number Pad */
+.numpad {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 1rem;
+}
+
+.numpad-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--cell-border);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 10px 0;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.numpad-btn:hover {
+    background: var(--cell-border);
+}
+
+.numpad-btn.erase-btn {
+    color: #ef4444;
+}
+
+/* Buttons & Forms */
 .button-group {
     display: flex;
     gap: 10px;
@@ -395,4 +451,52 @@ input:checked+.slider:before {
 .btn-secondary:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+/* Tabs */
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 5px 10px;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Drop Zone */
+.drop-zone {
+    border: 2px dashed var(--cell-border);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+}
+
+.drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--accent);
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.drop-zone input {
+    display: none;
 }

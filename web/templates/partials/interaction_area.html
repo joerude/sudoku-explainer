@@ -18,19 +18,21 @@
                 </div>
 
                 <div class="sudoku-board">
-                    {% for r in range(9) %}
-                    <div class="board-row {% if (r + 1) % 3 == 0 and r != 8 %}border-bottom{% endif %}">
-                        {% for c in range(9) %}
-                        {% set val = board.get_value(r, c) %}
-                        <div
-                            class="cell {% if (c + 1) % 3 == 0 and c != 8 %}border-right{% endif %} {% if val != 0 %}filled{% endif %}">
-                            {% if val != 0 %}
-                            <span class="value">{{ val }}</span>
+                    {% for row in range(9) %}
+                    <div class="board-row {% if (row + 1) % 3 == 0 and row != 8 %}border-bottom{% endif %}">
+                        {% for col in range(9) %}
+                        <div class="cell {% if (col + 1) % 3 == 0 and col != 8 %}border-right{% endif %} {% if board.grid[row][col] != 0 %}filled{% endif %} {% if row == selected_row and col == selected_col %}selected{% endif %}"
+                            onclick="selectCell(this, {{ row }}, {{ col }})"
+                            onmouseenter="handleMouseEnter({{ row }}, {{ col }})" onmouseleave="handleMouseLeave()"
+                            data-row="{{ row }}" data-col="{{ col }}" data-value="{{ board.grid[row][col] }}"
+                            id="cell-{{ row }}-{{ col }}">
+                            {% if board.grid[row][col] != 0 %}
+                            <span class="value">{{ board.grid[row][col] }}</span>
                             {% else %}
                             <div class="candidates-grid">
                                 {% for i in range(1, 10) %}
                                 <span class="cand-spot">
-                                    {% if i in board.get_candidates(r, c) %}{{ i }}{% endif %}
+                                    {% if i in board.candidates[row][col] %}{{ i }}{% endif %}
                                 </span>
                                 {% endfor %}
                             </div>
@@ -46,11 +48,36 @@
 
     <div class="sidebar">
         <div class="controls-header">
-            <label class="toggle-switch">
-                <input type="checkbox" id="notesToggle" onclick="document.body.classList.toggle('hide-notes')" checked>
-                <span class="slider round"></span>
-                <span class="label-text">Easy Mode (Hide Notes)</span>
-            </label>
+            <div class="toggles-container">
+                <label class="toggle-switch" title="Hide candidates">
+                    <input type="checkbox" id="notesToggle" onclick="toggleNotes()" checked>
+                    <span class="slider round"></span>
+                    <span class="label-text">Easy Mode</span>
+                </label>
+                <label class="toggle-switch" title="Show incorrect values in red">
+                    <input type="checkbox" id="mistakesToggle" onclick="toggleMistakes()">
+                    <span class="slider round"></span>
+                    <span class="label-text">Mistakes</span>
+                </label>
+                <label class="toggle-switch" title="Highlight all cells with same number">
+                    <input type="checkbox" id="highlightSameToggle" onclick="toggleHighlightSame()">
+                    <span class="slider round"></span>
+                    <span class="label-text">Highlight #</span>
+                </label>
+                <label class="toggle-switch" title="Highlight row and column">
+                    <input type="checkbox" id="crosshairToggle" onclick="toggleCrosshair()">
+                    <span class="slider round"></span>
+                    <span class="label-text">Crosshair</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Number Pad -->
+        <div class="numpad">
+            {% for i in range(1, 10) %}
+            <button class="numpad-btn" onclick="handleNumpad({{ i }})">{{ i }}</button>
+            {% endfor %}
+            <button class="numpad-btn erase-btn" onclick="handleNumpad(0)">⌫</button>
         </div>
 
         <div class="explanation-card">
@@ -89,10 +116,192 @@
             </div>
         </div>
     </div>
+
+    <!-- Hidden form for manual updates -->
+    <form id="updateForm" hx-post="/update" hx-target="#interaction-area" style="display:none;">
+        <input type="hidden" name="puzzle_str" value="{{ puzzle_str }}">
+        <input type="hidden" name="history" value='{{ history }}'>
+        <input type="hidden" name="row" id="updateRow">
+        <input type="hidden" name="col" id="updateCol">
+        <input type="hidden" name="value" id="updateValue">
+        <input type="hidden" name="mode" id="updateMode">
+    </form>
+
+    <!-- Solution Data -->
+    <div id="solutionData" data-solution="{{ solution_str }}" style="display:none;"></div>
 </div>
 <script>
-    // Re-apply hide notes state if needed after HTMX swap
-    if (document.getElementById('notesToggle') && document.body.classList.contains('hide-notes')) {
-        document.getElementById('notesToggle').checked = true;
+    // State management
+    var state = {
+        selectedRow: {{ selected_row if selected_row is defined else -1 }},
+    selectedCol: { { selected_col if selected_col is defined else -1 } },
+    hideNotes: true,
+        showMistakes: false,
+            highlightSame: false,
+                crosshair: false
+    };
+
+    // Initialize state from DOM if needed (e.g. after HTMX swap)
+    function initState() {
+        if (document.getElementById('notesToggle')) state.hideNotes = document.getElementById('notesToggle').checked;
+        if (document.getElementById('mistakesToggle')) state.showMistakes = document.getElementById('mistakesToggle').checked;
+        if (document.getElementById('highlightSameToggle')) state.highlightSame = document.getElementById('highlightSameToggle').checked;
+        if (document.getElementById('crosshairToggle')) state.crosshair = document.getElementById('crosshairToggle').checked;
+
+        applyVisuals();
     }
+
+    // Re-apply state after HTMX swap
+    initState();
+    if (state.hideNotes) document.body.classList.add('hide-notes');
+    else document.body.classList.remove('hide-notes');
+
+    function toggleNotes() {
+        state.hideNotes = !state.hideNotes;
+        document.body.classList.toggle('hide-notes', state.hideNotes);
+    }
+
+    function toggleMistakes() {
+        state.showMistakes = !state.showMistakes;
+        applyVisuals();
+    }
+
+    function toggleHighlightSame() {
+        state.highlightSame = !state.highlightSame;
+        applyVisuals();
+    }
+
+    function toggleCrosshair() {
+        state.crosshair = !state.crosshair;
+    }
+
+    function selectCell(element, r, c) {
+        // Deselect previous
+        document.querySelectorAll('.cell.selected').forEach(el => el.classList.remove('selected'));
+
+        // Select new
+        element.classList.add('selected');
+        state.selectedRow = r;
+        state.selectedCol = c;
+
+        applyVisuals();
+    }
+
+    function handleMouseEnter(r, c) {
+        if (!state.crosshair) return;
+
+        document.querySelectorAll('.cell').forEach(el => {
+            el.classList.remove('crosshair-highlight');
+            if (el.dataset.row == r || el.dataset.col == c) {
+                el.classList.add('crosshair-highlight');
+            }
+        });
+    }
+
+    function handleMouseLeave() {
+        document.querySelectorAll('.cell.crosshair-highlight').forEach(el => el.classList.remove('crosshair-highlight'));
+    }
+
+    function applyVisuals() {
+        const solution = document.getElementById('solutionData').dataset.solution;
+        const cells = document.querySelectorAll('.cell');
+
+        // Get selected value for highlighting
+        let selectedValue = 0;
+        if (state.selectedRow !== -1 && state.selectedCol !== -1) {
+            const selectedCell = document.getElementById(`cell-${state.selectedRow}-${state.selectedCol}`);
+            if (selectedCell) {
+                selectedValue = selectedCell.dataset.value;
+            }
+        }
+
+        cells.forEach(cell => {
+            const r = parseInt(cell.dataset.row);
+            const c = parseInt(cell.dataset.col);
+            const val = parseInt(cell.dataset.value);
+            const idx = r * 9 + c;
+            const correctVal = parseInt(solution[idx]);
+
+            // Mistakes
+            cell.classList.remove('error');
+            if (state.showMistakes && val !== 0 && val !== correctVal) {
+                cell.classList.add('error');
+            }
+
+            // Highlight Same
+            cell.classList.remove('highlight-same');
+            if (state.highlightSame && selectedValue != 0 && val == selectedValue) {
+                cell.classList.add('highlight-same');
+            }
+        });
+    }
+
+    function handleNumpad(num) {
+        if (state.selectedRow === -1 || state.selectedCol === -1) return;
+        submitUpdate(num, 'value');
+    }
+
+    function submitUpdate(value, mode) {
+        document.getElementById('updateRow').value = state.selectedRow;
+        document.getElementById('updateCol').value = state.selectedCol;
+        document.getElementById('updateValue').value = value;
+        document.getElementById('updateMode').value = mode;
+        htmx.trigger('#updateForm', 'submit');
+    }
+
+    // Keyboard listener
+    if (window.handleKey) {
+        document.removeEventListener('keydown', window.handleKey);
+    }
+
+    window.handleKey = function (e) {
+        if (e.target.tagName === 'INPUT') return;
+
+        // Arrow Key Navigation
+        if (e.key.startsWith('Arrow')) {
+            e.preventDefault();
+            let r = state.selectedRow;
+            let c = state.selectedCol;
+
+            if (r === -1 || c === -1) {
+                r = 0; c = 0;
+            } else {
+                if (e.key === 'ArrowUp') r = Math.max(0, r - 1);
+                if (e.key === 'ArrowDown') r = Math.min(8, r + 1);
+                if (e.key === 'ArrowLeft') c = Math.max(0, c - 1);
+                if (e.key === 'ArrowRight') c = Math.min(8, c + 1);
+            }
+
+            const cell = document.getElementById(`cell-${r}-${c}`);
+            if (cell) selectCell(cell, r, c);
+            return;
+        }
+
+        if (state.selectedRow === -1 || state.selectedCol === -1) return;
+
+        let value = -1;
+        let mode = 'value';
+
+        if (e.key >= '1' && e.key <= '9') {
+            value = parseInt(e.key);
+            if (e.shiftKey) {
+                mode = 'note';
+            } else {
+                // If Easy Mode is ON, default to value.
+                // If Easy Mode is OFF, maybe default to note? 
+                // User said "Toggle 'Note Mode' (or Shift+Key)".
+                // Let's keep Shift = Note for now.
+                mode = 'value';
+            }
+        } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
+            value = 0;
+            mode = 'value';
+        }
+
+        if (value !== -1) {
+            submitUpdate(value, mode);
+        }
+    };
+
+    document.addEventListener('keydown', window.handleKey);
 </script>

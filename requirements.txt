@@ -2,3 +2,7 @@ fastapi
 uvicorn
 jinja2
 python-multipart
+opencv-python-headless
+pytesseract
+numpy
+pillow

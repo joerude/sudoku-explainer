@@ -1,0 +1,47 @@
+<div class="board-wrapper">
+    <!-- Column Headers -->
+    <div class="col-headers">
+        <div class="corner-label"></div>
+        {% for c in range(1, 10) %}
+        <div class="col-header">{{ c }}</div>
+        {% endfor %}
+    </div>
+
+    <div class="board-body">
+        <!-- Row Headers -->
+        <div class="row-headers">
+            {% for r in range(1, 10) %}
+            <div class="row-header">{{ r }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="sudoku-board">
+            {% for row in range(9) %}
+            <div class="board-row {% if (row + 1) % 3 == 0 and row != 8 %}border-bottom{% endif %}">
+                {% for col in range(9) %}
+                <div class="cell {% if (col + 1) % 3 == 0 and col != 8 %}border-right{% endif %} {% if board.grid[row][col] != 0 %}filled{% endif %} {% if row == selected_row and col == selected_col %}selected{% endif %}"
+                    onclick="selectCell(this, {{ row }}, {{ col }})"
+                    onmouseenter="handleMouseEnter({{ row }}, {{ col }})" onmouseleave="handleMouseLeave()"
+                    data-row="{{ row }}" data-col="{{ col }}" data-value="{{ board.grid[row][col] }}"
+                    id="cell-{{ row }}-{{ col }}">
+                    {% if board.grid[row][col] != 0 %}
+                    <span class="value">{{ board.grid[row][col] }}</span>
+                    {% else %}
+                    <div class="candidates-grid">
+                        {% for i in range(1, 10) %}
+                        <span class="cand-spot">
+                            {% if i in board.candidates[row][col] %}{{ i }}{% endif %}
+                        </span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Solution Data -->
+<div id="solutionData" data-solution="{{ solution_str }}" style="display:none;"></div>

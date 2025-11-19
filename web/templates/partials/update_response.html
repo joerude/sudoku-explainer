@@ -1,0 +1,12 @@
+{% include "partials/board.html" %}
+
+<div id="dynamic-controls-wrapper" hx-swap-oob="innerHTML">
+    {% include "partials/controls.html" %}
+</div>
+
+<script>
+    // Re-apply visuals after swap
+    if (typeof applyVisuals === 'function') {
+        applyVisuals();
+    }
+</script>

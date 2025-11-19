@@ -1,10 +1,11 @@
-from typing import List, Set, Optional, Tuple
+from typing import List, Set, Optional
+
 
 class Board:
     def __init__(self, grid: Optional[List[List[int]]] = None):
         self.grid = [[0 for _ in range(9)] for _ in range(9)]
         self.candidates = [[set(range(1, 10)) for _ in range(9)] for _ in range(9)]
-        
+
         if grid:
             for r in range(9):
                 for c in range(9):
@@ -23,12 +24,12 @@ class Board:
         for c in range(9):
             if value in self.candidates[row][c]:
                 self.candidates[row][c].remove(value)
-        
+
         # Column
         for r in range(9):
             if value in self.candidates[r][col]:
                 self.candidates[r][col].remove(value)
-        
+
         # Box
         start_r, start_c = (row // 3) * 3, (col // 3) * 3
         for r in range(start_r, start_r + 3):
@@ -49,6 +50,13 @@ class Board:
             return True
         return False
 
+    def add_candidate(self, row: int, col: int, value: int) -> bool:
+        """Adds a candidate to a cell. Returns True if changed."""
+        if value not in self.candidates[row][col]:
+            self.candidates[row][col].add(value)
+            return True
+        return False
+
     def is_solved(self) -> bool:
         for r in range(9):
             for c in range(9):
@@ -63,16 +71,18 @@ class Board:
             for c in range(9):
                 val = self.grid[r][c]
                 if val != 0:
-                    if val in seen: return False
+                    if val in seen:
+                        return False
                     seen.add(val)
-        
+
         # Check cols
         for c in range(9):
             seen = set()
             for r in range(9):
                 val = self.grid[r][c]
                 if val != 0:
-                    if val in seen: return False
+                    if val in seen:
+                        return False
                     seen.add(val)
 
         # Check boxes
@@ -83,17 +93,16 @@ class Board:
                     for c in range(bc, bc + 3):
                         val = self.grid[r][c]
                         if val != 0:
-                            if val in seen: return False
+                            if val in seen:
+                                return False
                             seen.add(val)
         return True
 
-    def clone(self) -> 'Board':
+    def clone(self) -> "Board":
         """Creates a deep copy of the board."""
         new_board = Board()
         new_board.grid = [row[:] for row in self.grid]
-        new_board.candidates = [
-            [c.copy() for c in row] for row in self.candidates
-        ]
+        new_board.candidates = [[c.copy() for c in row] for row in self.candidates]
         return new_board
 
     def __str__(self) -> str:
