@@ -500,3 +500,30 @@ input:checked+.slider:before {
 .drop-zone input {
     display: none;
 }
+
+/* Error Highlighting */
+.cell.error {
+    background-color: #fee2e2 !important; /* Light red */
+    color: #dc2626 !important; /* Dark red */
+}
+
+.cell.error .value {
+    color: #dc2626 !important;
+}
+
+/* Numpad Container */
+.numpad-container {
+    margin-top: auto; /* Push to bottom if flex container allows */
+    padding-top: 20px;
+}
+
+/* Fixed Cells */
+.cell.fixed {
+    background-color: #334155; /* Darker background for fixed cells */
+    color: var(--text-primary);
+    font-weight: 800;
+}
+
+.cell.fixed .value {
+    color: #94a3b8; /* Slightly dimmed text */
+}

@@ -19,11 +19,13 @@
             {% for row in range(9) %}
             <div class="board-row {% if (row + 1) % 3 == 0 and row != 8 %}border-bottom{% endif %}">
                 {% for col in range(9) %}
-                <div class="cell {% if (col + 1) % 3 == 0 and col != 8 %}border-right{% endif %} {% if board.grid[row][col] != 0 %}filled{% endif %} {% if row == selected_row and col == selected_col %}selected{% endif %}"
-                    onclick="selectCell(this, {{ row }}, {{ col }})"
+                {% set idx = row * 9 + col %}
+                {% set is_fixed = original_puzzle_str[idx] != '0' %}
+                <div class="cell {% if (col + 1) % 3 == 0 and col != 8 %}border-right{% endif %} {% if board.grid[row][col] != 0 %}filled{% endif %} {% if row == selected_row and col == selected_col %}selected{% endif %} {% if is_fixed %}fixed{% endif %}"
+                    onclick="selectCell(this, {{ row }}, {{ col }}, {{ 'true' if is_fixed else 'false' }})"
                     onmouseenter="handleMouseEnter({{ row }}, {{ col }})" onmouseleave="handleMouseLeave()"
                     data-row="{{ row }}" data-col="{{ col }}" data-value="{{ board.grid[row][col] }}"
-                    id="cell-{{ row }}-{{ col }}">
+                    data-fixed="{{ 'true' if is_fixed else 'false' }}" id="cell-{{ row }}-{{ col }}">
                     {% if board.grid[row][col] != 0 %}
                     <span class="value">{{ board.grid[row][col] }}</span>
                     {% else %}

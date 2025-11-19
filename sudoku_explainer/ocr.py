@@ -74,16 +74,13 @@ def generate_templates():
 
     font = cv2.FONT_HERSHEY_SIMPLEX
     for i in range(1, 10):
-        # Create a black image
         template = np.zeros((50, 50), dtype=np.uint8)
-        # Draw digit centered
         text = str(i)
         (w, h), _ = cv2.getTextSize(text, font, 1.5, 2)
         x = (50 - w) // 2
         y = (50 + h) // 2
         cv2.putText(template, text, (x, y), font, 1.5, 255, 2)
 
-        # Crop to bounding box
         coords = cv2.findNonZero(template)
         x, y, w, h = cv2.boundingRect(coords)
         template = template[y : y + h, x : x + w]
@@ -92,25 +89,20 @@ def generate_templates():
 
 def extract_digit(cell, debug=False):
     """Extracts digit from a cell using Template Matching."""
-    # Preprocess cell
     thresh = cv2.threshold(cell, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
 
-    # Clear borders to remove grid lines
     h, w = thresh.shape
     thresh = thresh[5 : h - 5, 5 : w - 5]
 
-    # Check if empty
-    if cv2.countNonZero(thresh) < 20:  # Threshold for noise
+    if cv2.countNonZero(thresh) < 20:
         return 0
 
-    # Find bounding box of the digit in the cell
     coords = cv2.findNonZero(thresh)
     if coords is None:
         return 0
     x, y, w, h = cv2.boundingRect(coords)
     roi = thresh[y : y + h, x : x + w]
 
-    # Resize ROI to a standard height for comparison, maintaining aspect ratio
     target_h = 30
     scale = target_h / h
     target_w = int(w * scale)
@@ -119,61 +111,67 @@ def extract_digit(cell, debug=False):
 
     roi_resized = cv2.resize(roi, (target_w, target_h))
 
-    # Generate templates if needed
     generate_templates()
 
     best_score = -1
-    best_digit = 0
+    # Special handling for '1' which is often thin and misidentified
+    # We can try multiple fonts or weights if needed, but for now let's just
+    # ensure we have a good template.
+    # Also, '1' has a very small area compared to other digits.
 
+    scores = []
     for digit, template in TEMPLATES.items():
-        # Resize template to match ROI height
-        t_h, t_w = template.shape
-        if t_h == 0 or t_w == 0:
-            continue
-
-        scale_t = target_h / t_h
-        t_w_new = int(t_w * scale_t)
-        template_resized = cv2.resize(template, (t_w_new, target_h))
-
-        # Match shapes must be similar
-        if abs(t_w_new - target_w) > 10:
-            continue
-
-        # Resize template to exactly match ROI for simple subtraction/correlation
+        # Resize template to match cell roi
+        # We resize the template to the ROI size
         try:
-            template_matched = cv2.resize(template, (target_w, target_h))
+            resized_template = cv2.resize(template, (roi.shape[1], roi.shape[0]))
 
-            # Simple correlation
-            score = cv2.matchTemplate(
-                roi_resized, template_matched, cv2.TM_CCOEFF_NORMED
-            )[0][0]
+            # Match
+            res = cv2.matchTemplate(roi, resized_template, cv2.TM_CCOEFF_NORMED)
+            _, max_val, _, _ = cv2.minMaxLoc(res)
 
-            if score > best_score:
-                best_score = score
-                best_digit = digit
-        except:
-            continue
+            # Boost score for '1' if it's a strong match but maybe slightly lower than others due to thinness
+            if digit == 1:
+                if max_val > 0.6:  # Lower threshold for 1
+                    scores.append((max_val * 1.1, digit))  # Boost it
+                else:
+                    scores.append((max_val, digit))
+            else:
+                scores.append((max_val, digit))
+        except Exception:
+            pass
 
-    if best_score > 0.4:  # Confidence threshold
+    if not scores:
+        return 0
+
+    best_score, best_digit = max(scores, key=lambda x: x[0])
+
+    # Threshold - if best match is too low, it's empty
+    # '1' might still be tricky.
+    if best_score > 0.5:  # Lowered threshold slightly
         return best_digit
-    return 0
+    else:
+        return 0
 
 
 def process_sudoku_image(image_bytes):
     """Main pipeline: Image -> Grid -> Digits -> String."""
     try:
+        print(f"[OCR] Processing image: {len(image_bytes)} bytes")
         img, gray, thresh = preprocess_image(image_bytes)
         contour = find_grid_contour(thresh)
 
         if contour is None:
+            print("[OCR] No grid found")
             return None, "Could not find Sudoku grid."
 
         warped = four_point_transform(gray, contour)
 
-        # Split into 81 cells
         cells = []
         h, w = warped.shape
         cell_h, cell_w = h // 9, w // 9
+
+        print(f"[OCR] Grid found: {w}x{h}")
 
         puzzle_str = ""
         for r in range(9):
@@ -184,6 +182,8 @@ def process_sudoku_image(image_bytes):
                 digit = extract_digit(cell)
                 puzzle_str += str(digit)
 
+        print(f"[OCR] Result: {puzzle_str}")
         return puzzle_str, None
     except Exception as e:
+        print(f"[OCR] Error: {e}")
         return None, str(e)

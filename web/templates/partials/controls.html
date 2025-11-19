@@ -9,6 +9,7 @@
     <div class="button-group">
         <form hx-post="/undo" hx-target="#board-container-wrapper">
             <input type="hidden" name="history" value='{{ history }}'>
+            <input type="hidden" name="original_puzzle_str" value="{{ original_puzzle_str }}">
             <button type="submit" class="btn-secondary" {% if history=="[]" %}disabled{% endif %}>
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -21,6 +22,7 @@
 
         <form hx-post="/step" hx-target="#board-container-wrapper" class="step-form">
             <input type="hidden" name="puzzle_str" value="{{ puzzle_str }}">
+            <input type="hidden" name="original_puzzle_str" value="{{ original_puzzle_str }}">
             <input type="hidden" name="history" value='{{ history }}'>
             <button type="submit" class="btn-primary big-btn">
                 Next Step
@@ -37,6 +39,8 @@
 <!-- Hidden form for manual updates -->
 <form id="updateForm" hx-post="/update" hx-target="#board-container-wrapper" style="display:none;">
     <input type="hidden" name="puzzle_str" value="{{ puzzle_str }}">
+    <input type="hidden" name="original_puzzle_str" value="{{ original_puzzle_str }}">
+    <input type="hidden" id="solutionStr" value="{{ solution_str }}">
     <input type="hidden" name="history" value='{{ history }}'>
     <input type="hidden" name="row" id="updateRow">
     <input type="hidden" name="col" id="updateCol">

@@ -55,11 +55,17 @@
                 </div>
 
                 <div id="image-tab" class="tab-content">
-                    <form hx-post="/import" hx-encoding="multipart/form-data" hx-target="#board-container-wrapper"
+                    <form id="uploadForm" hx-post="/import" hx-encoding="multipart/form-data"
+                        hx-target="#board-container-wrapper" hx-indicator="#ocr-loading"
+                        hx-on::after-request="document.getElementById('ocr-loading').classList.remove('htmx-request')"
                         class="upload-form">
                         <div class="drop-zone" id="dropZone">
                             <p>Drag & Drop or Paste Image</p>
                             <input type="file" name="file" accept="image/*" id="fileInput">
+                        </div>
+                        <div id="ocr-loading" class="htmx-indicator">
+                            <div class="spinner"></div>
+                            <p>Processing Image...</p>
                         </div>
                     </form>
                 </div>
@@ -104,16 +110,18 @@
                         </div>
                     </div>
 
-                    <!-- Number Pad -->
-                    <div class="numpad">
-                        {% for i in range(1, 10) %}
-                        <button class="numpad-btn" onclick="handleNumpad({{ i }})">{{ i }}</button>
-                        {% endfor %}
-                        <button class="numpad-btn erase-btn" onclick="handleNumpad(0)">⌫</button>
-                    </div>
-
                     <div id="dynamic-controls-wrapper">
                         {% include "partials/controls.html" %}
+                    </div>
+
+                    <!-- Number Pad -->
+                    <div class="numpad-container">
+                        <div class="numpad">
+                            {% for i in range(1, 10) %}
+                            <button class="numpad-btn" onclick="handleNumpad({{ i }})">{{ i }}</button>
+                            {% endfor %}
+                            <button class="numpad-btn erase-btn" onclick="handleNumpad(0)">⌫</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -228,7 +236,7 @@
             state.crosshair = !state.crosshair;
         }
 
-        function selectCell(element, r, c) {
+        function selectCell(element, r, c, isFixed) {
             // Deselect previous
             document.querySelectorAll('.cell.selected').forEach(el => el.classList.remove('selected'));
 
@@ -236,6 +244,7 @@
             element.classList.add('selected');
             state.selectedRow = r;
             state.selectedCol = c;
+            state.isFixed = isFixed;
 
             applyVisuals();
         }
@@ -294,6 +303,7 @@
 
         function handleNumpad(num) {
             if (state.selectedRow === -1 || state.selectedCol === -1) return;
+            if (state.isFixed) return; // Prevent editing fixed cells
             submitUpdate(num, 'value');
         }
 
@@ -329,11 +339,15 @@
                 }
 
                 const cell = document.getElementById(`cell-${r}-${c}`);
-                if (cell) selectCell(cell, r, c);
+                if (cell) {
+                    const isFixed = cell.dataset.fixed === 'true';
+                    selectCell(cell, r, c, isFixed);
+                }
                 return;
             }
 
             if (state.selectedRow === -1 || state.selectedCol === -1) return;
+            if (state.isFixed) return; // Prevent editing fixed cells
 
             let value = -1;
             let mode = 'value';
