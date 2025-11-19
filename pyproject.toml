@@ -1,0 +1,28 @@
+[project]
+name = "sudoku-explainer"
+version = "0.1.0"
+description = "A Sudoku Explainer with CLI and Web Interface"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn>=0.27.0",
+    "jinja2>=3.1.3",
+    "python-multipart>=0.0.9",
+]
+
+[project.scripts]
+sudoku-cli = "sudoku_explainer.cli:main"
+sudoku-web = "web.app:start"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = []

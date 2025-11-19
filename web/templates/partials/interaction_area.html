@@ -1,0 +1,98 @@
+<div class="game-layout">
+    <div class="board-container">
+        <div class="board-wrapper">
+            <!-- Column Headers -->
+            <div class="col-headers">
+                <div class="corner-label"></div>
+                {% for c in range(1, 10) %}
+                <div class="col-header">{{ c }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="board-body">
+                <!-- Row Headers -->
+                <div class="row-headers">
+                    {% for r in range(1, 10) %}
+                    <div class="row-header">{{ r }}</div>
+                    {% endfor %}
+                </div>
+
+                <div class="sudoku-board">
+                    {% for r in range(9) %}
+                    <div class="board-row {% if (r + 1) % 3 == 0 and r != 8 %}border-bottom{% endif %}">
+                        {% for c in range(9) %}
+                        {% set val = board.get_value(r, c) %}
+                        <div
+                            class="cell {% if (c + 1) % 3 == 0 and c != 8 %}border-right{% endif %} {% if val != 0 %}filled{% endif %}">
+                            {% if val != 0 %}
+                            <span class="value">{{ val }}</span>
+                            {% else %}
+                            <div class="candidates-grid">
+                                {% for i in range(1, 10) %}
+                                <span class="cand-spot">
+                                    {% if i in board.get_candidates(r, c) %}{{ i }}{% endif %}
+                                </span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="controls-header">
+            <label class="toggle-switch">
+                <input type="checkbox" id="notesToggle" onclick="document.body.classList.toggle('hide-notes')" checked>
+                <span class="slider round"></span>
+                <span class="label-text">Easy Mode (Hide Notes)</span>
+            </label>
+        </div>
+
+        <div class="explanation-card">
+            <h3>Analysis</h3>
+            <div class="explanation-text">
+                {{ explanation | safe }}
+            </div>
+        </div>
+
+        <div class="actions">
+            <div class="button-group">
+                <form hx-post="/undo" hx-target="#interaction-area">
+                    <input type="hidden" name="history" value="{{ history }}">
+                    <button type="submit" class="btn-secondary" {% if history=="[]" %}disabled{% endif %}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 14 4 9l5-5" />
+                            <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5v0a5.5 5.5 0 0 1-5.5 5.5H11" />
+                        </svg>
+                        Undo
+                    </button>
+                </form>
+
+                <form hx-post="/step" hx-target="#interaction-area" class="step-form">
+                    <input type="hidden" name="puzzle_str" value="{{ puzzle_str }}">
+                    <input type="hidden" name="history" value="{{ history }}">
+                    <button type="submit" class="btn-primary big-btn">
+                        Next Step
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    // Re-apply hide notes state if needed after HTMX swap
+    if (document.getElementById('notesToggle') && document.body.classList.contains('hide-notes')) {
+        document.getElementById('notesToggle').checked = true;
+    }
+</script>

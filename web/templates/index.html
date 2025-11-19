@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sudoku Explainer</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="hide-notes">
+    <div class="app-layout">
+        <!-- Left Sidebar: Puzzle Selection -->
+        <aside class="left-sidebar">
+            <div class="sidebar-header">
+                <h2>Puzzles</h2>
+            </div>
+
+            <div class="puzzle-menu">
+                {% for difficulty, puzzle_list in puzzles.items() %}
+                <div class="difficulty-section">
+                    <h3 class="difficulty-title">{{ difficulty }}</h3>
+                    <div class="puzzle-grid">
+                        {% for p in puzzle_list %}
+                        <button class="puzzle-btn" onclick="loadPuzzle('{{ p }}')">
+                            {{ loop.index }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="custom-puzzle-section">
+                <h3>Custom</h3>
+                <form hx-post="/new" hx-target="#interaction-area" class="input-form" id="puzzleForm">
+                    <input type="text" name="puzzle_input" id="puzzleInput" placeholder="Paste 81 chars..."
+                        pattern="[0-9]{81}" title="81 digits">
+                    <button type="submit" class="btn-icon" title="Load">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header>
+                <h1>Sudoku Explainer</h1>
+                <p>AI-powered step-by-step logical solver</p>
+            </header>
+
+            <div id="interaction-area">
+                {% include "partials/interaction_area.html" %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function loadPuzzle(puzzleStr) {
+            document.getElementById('puzzleInput').value = puzzleStr;
+            htmx.trigger('#puzzleForm', 'submit');
+        }
+    </script>
+</body>
+
+</html>
