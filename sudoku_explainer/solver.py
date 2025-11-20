@@ -3,6 +3,8 @@ from .board import Board
 from .strategies.base import Strategy
 from .strategies.basics import NakedSingle, HiddenSingle
 from .strategies.pairs import NakedPair
+from .strategies.x_wing import XWing
+from .strategies.triples import NakedTriple
 
 class SudokuSolver:
     def __init__(self, board: Board):
@@ -11,6 +13,8 @@ class SudokuSolver:
             NakedSingle(),
             HiddenSingle(),
             NakedPair(),
+            NakedTriple(),
+            XWing(),
             # Add more strategies here as they are implemented
         ]
         self.steps: List[Dict[str, Any]] = []
